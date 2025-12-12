@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import mlflow
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.pipeline import Pipeline
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.collisions import training_utils
 from src.collisions.data_cleaning import TARGET_COLUMN
