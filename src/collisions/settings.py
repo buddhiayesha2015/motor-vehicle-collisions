@@ -34,7 +34,7 @@ class DatabaseSettings(BaseSettings):
 class Paths(BaseModel):
     """Project paths used across scripts."""
 
-    raw_data: Path = Path("data/Motor_Vehicle_Collisions-Crashes_20251211.csv")
+    raw_data: Path = Path("data/raw/Motor_Vehicle_Collisions-Crashes_20251211.csv")
     processed_dir: Path = Path("data/processed")
     cleaned_data: Path = processed_dir / "cleaned_collisions.csv"
     train: Path = processed_dir / "train.csv"
