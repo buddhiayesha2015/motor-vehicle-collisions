@@ -1,1 +1,8 @@
-/.idea/
+.venv
+__pycache__
+*.pyc
+artifacts/
+mlruns/
+.env
+.DS_Store
+data/processed/*.csv
