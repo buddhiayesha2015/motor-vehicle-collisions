@@ -51,9 +51,8 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     for col in NUMERIC_COLUMNS:
         df[col] = pd.to_numeric(df[col], errors="coerce")
         df.loc[df[col] < 0, col] = np.nan
-        median_value = df[col].median()
-        if np.isnan(median_value):
-            median_value = 0.0
+        non_null_values = df[col].dropna()
+        median_value = non_null_values.median() if not non_null_values.empty else 0.0
         df[col] = df[col].fillna(median_value)
 
     for col in CATEGORICAL_COLUMNS:
@@ -64,7 +63,7 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
 def convert_datetime(df: pd.DataFrame) -> pd.DataFrame:
     df["CRASH TIME"] = df["CRASH TIME"].astype(str).str.zfill(5)
     df["CRASH_DATETIME"] = pd.to_datetime(
-        df["CRASH DATE"] + " " + df["CRASH TIME"], errors="coerce", infer_datetime_format=True
+        df["CRASH DATE"] + " " + df["CRASH TIME"], errors="coerce"
     )
     df = df.dropna(subset=["CRASH_DATETIME"])
     df["CRASH_DATE_ISO"] = df["CRASH_DATETIME"].dt.strftime("%Y-%m-%d")
