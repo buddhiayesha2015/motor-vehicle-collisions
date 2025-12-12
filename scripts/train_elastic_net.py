@@ -1,0 +1,45 @@
+from __future__ import annotations
+
+import mlflow
+from sklearn.linear_model import ElasticNet
+from sklearn.pipeline import Pipeline
+
+from src.collisions import training_utils
+
+MODEL_NAME = "collisions_elastic_net"
+
+
+def main() -> None:
+    training_utils.setup_mlflow()
+    train_df, validate_df, test_df = training_utils.load_datasets()
+    X_train, y_train = training_utils.feature_target_split(train_df)
+    X_val, y_val = training_utils.feature_target_split(validate_df)
+    X_test, y_test = training_utils.feature_target_split(test_df)
+
+    preprocessor = training_utils.build_preprocessor()
+    model = ElasticNet(alpha=0.1, l1_ratio=0.5, random_state=7)
+    pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
+
+    with mlflow.start_run(run_name=MODEL_NAME):
+        mlflow.log_params({
+            "alpha": model.alpha,
+            "l1_ratio": model.l1_ratio,
+            "random_state": model.random_state,
+        })
+        pipeline.fit(X_train, y_train)
+
+        val_metrics = training_utils.evaluate_regression(pipeline, X_val, y_val, "val")
+        test_metrics = training_utils.evaluate_regression(pipeline, X_test, y_test, "test")
+        for k, v in {**val_metrics, **test_metrics}.items():
+            mlflow.log_metric(k, v)
+
+        mlflow.sklearn.log_model(pipeline, artifact_path="model", registered_model_name=MODEL_NAME)
+        run = mlflow.active_run()
+        if run:
+            model_uri = f"runs:/{run.info.run_id}/model"
+            version = training_utils.register_model(model_uri, MODEL_NAME)
+            mlflow.log_param("registered_version", version)
+
+
+if __name__ == "__main__":
+    main()

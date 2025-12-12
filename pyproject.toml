@@ -1,0 +1,25 @@
+[project]
+name = "motor-vehicle-collisions"
+version = "0.1.0"
+description = "NYC motor vehicle collision modeling with MLflow and FastAPI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "mlflow",
+    "fastapi",
+    "uvicorn",
+    "psycopg2-binary",
+    "h2o",
+    "pydantic",
+    "pydantic-settings",
+    "python-multipart",
+    "nannyml",
+    "matplotlib",
+    "seaborn",
+]
+
+[tool.uv]
+index-url = "https://pypi.org/simple"
