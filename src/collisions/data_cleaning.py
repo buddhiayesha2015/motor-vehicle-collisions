@@ -51,9 +51,8 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     for col in NUMERIC_COLUMNS:
         df[col] = pd.to_numeric(df[col], errors="coerce")
         df.loc[df[col] < 0, col] = np.nan
-        median_value = df[col].median()
-        if np.isnan(median_value):
-            median_value = 0.0
+        non_null_values = df[col].dropna()
+        median_value = non_null_values.median() if not non_null_values.empty else 0.0
         df[col] = df[col].fillna(median_value)
 
     for col in CATEGORICAL_COLUMNS:
