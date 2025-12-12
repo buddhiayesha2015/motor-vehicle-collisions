@@ -4,6 +4,6 @@ __pycache__
 artifacts/
 mlruns/
 .env
-.DS_Store
 data/processed/*.csv
+data/raw/*.csv
 /.idea/
