@@ -24,7 +24,7 @@ def load_split(path: Path) -> pd.DataFrame:
 
 
 def load_datasets() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    return load_split(PATHS.train), load_split(PATHS.validate), load_split(PATHS.test)
+    return load_split(PATHS.train), load_split(PATHS.validation), load_split(PATHS.test)
 
 
 def feature_target_split(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:

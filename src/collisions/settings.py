@@ -38,7 +38,7 @@ class Paths(BaseModel):
     processed_dir: Path = Path("data/processed")
     cleaned_data: Path = processed_dir / "cleaned_collisions.csv"
     train: Path = processed_dir / "train.csv"
-    validate: Path = processed_dir / "validate.csv"
+    validation: Path = processed_dir / "validate.csv"
     test: Path = processed_dir / "test.csv"
     automl_leaderboard: Path = Path("artifacts/automl_leaderboard.csv")
     feature_metadata: Path = Path("artifacts/feature_metadata.json")

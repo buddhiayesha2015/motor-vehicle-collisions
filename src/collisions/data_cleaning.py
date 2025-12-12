@@ -51,7 +51,10 @@ def handle_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     for col in NUMERIC_COLUMNS:
         df[col] = pd.to_numeric(df[col], errors="coerce")
         df.loc[df[col] < 0, col] = np.nan
-        df[col] = df[col].fillna(df[col].median())
+        median_value = df[col].median()
+        if np.isnan(median_value):
+            median_value = 0.0
+        df[col] = df[col].fillna(median_value)
 
     for col in CATEGORICAL_COLUMNS:
         df[col] = normalize_text(df[col]).replace({"": "Unknown"})
@@ -94,6 +97,7 @@ def clean_dataset(raw_path: Path = PATHS.raw_data, output_path: Path = PATHS.cle
         "categorical_columns": CATEGORICAL_COLUMNS,
         "encoded_columns": [f"{c}_ENCODED" for c in CATEGORICAL_COLUMNS],
     }
+    PATHS.feature_metadata.parent.mkdir(parents=True, exist_ok=True)
     PATHS.feature_metadata.write_text(json.dumps(metadata, indent=2))
     return df
 
@@ -112,7 +116,7 @@ def split_and_save(df: pd.DataFrame) -> None:
     train_df, validate_df, test_df = chronological_split(df)
     PATHS.train.parent.mkdir(parents=True, exist_ok=True)
     train_df.to_csv(PATHS.train, index=False)
-    validate_df.to_csv(PATHS.validate, index=False)
+    validate_df.to_csv(PATHS.validation, index=False)
     test_df.to_csv(PATHS.test, index=False)
 
 

@@ -11,7 +11,7 @@ from src.collisions.settings import PATHS
 def main() -> None:
     h2o.init()
     train_df = pd.read_csv(PATHS.train)
-    validate_df = pd.read_csv(PATHS.validate)
+    validate_df = pd.read_csv(PATHS.validation)
 
     feature_cols = [c for c in train_df.columns if c != TARGET_COLUMN]
     train_h2o = h2o.H2OFrame(train_df)
