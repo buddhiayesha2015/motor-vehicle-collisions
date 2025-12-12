@@ -23,3 +23,5 @@ dependencies = [
 
 [tool.uv]
 index-url = "https://pypi.org/simple"
+override-dependencies = ["kaleido==0.2.1"]
+required-environments = ["sys_platform == 'win32' and platform_machine == 'AMD64'"]
