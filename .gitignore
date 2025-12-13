@@ -1,1 +1,8 @@
+.venv
+__pycache__
+*.pyc
+mlruns/
+.env
+data/processed/*.csv
+data/raw/*.csv
 /.idea/
