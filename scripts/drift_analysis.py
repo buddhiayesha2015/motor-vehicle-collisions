@@ -37,8 +37,14 @@ def main() -> None:
     reference["prediction"] = model.predict(reference[feature_cols])
     production["prediction"] = model.predict(production[feature_cols])
 
-    rmse_ref = mean_squared_error(reference[TARGET_COLUMN], reference["prediction"], squared=False)
-    rmse_prod = mean_squared_error(production[TARGET_COLUMN], production["prediction"], squared=False)
+    def rmse(y_true, y_pred):
+        try:
+            return mean_squared_error(y_true, y_pred, squared=False)
+        except TypeError:
+            return mean_squared_error(y_true, y_pred, squared=True) ** 0.5
+
+    rmse_ref = rmse(reference[TARGET_COLUMN], reference["prediction"])
+    rmse_prod = rmse(production[TARGET_COLUMN], production["prediction"])
 
     data_drift = nml.DataQualityCalculator(column_names=feature_cols)
     data_drift = data_drift.fit(reference)
