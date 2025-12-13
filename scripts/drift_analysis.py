@@ -5,6 +5,7 @@ from pathlib import Path
 
 import mlflow
 import nannyml as nml
+from nannyml.data_quality import DataQualityCalculator
 from math import sqrt
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -43,7 +44,8 @@ def main() -> None:
     rmse_ref = sqrt(mean_squared_error(reference[TARGET_COLUMN], reference["prediction"]))
     rmse_prod = sqrt(mean_squared_error(production[TARGET_COLUMN], production["prediction"]))
 
-    data_drift = nml.DataQualityCalculator(column_names=feature_cols)
+    # DataQualityCalculator is exposed via the data_quality module in current NannyML versions
+    data_drift = DataQualityCalculator(column_names=feature_cols)
     data_drift = data_drift.fit(reference)
     drift_report = data_drift.calculate(production)
 
