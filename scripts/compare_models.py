@@ -24,7 +24,12 @@ def fetch_metrics(model_name: str) -> dict:
     experiments = client.get_experiment_by_name(MLFLOW_SETTINGS.experiment_name)
     if not experiments:
         return {"model": model_name}
-    runs = client.search_runs(experiments.experiment_id, filter_string=f"tags.mlflow.log-model.history.model_name = '{model_name}'")
+    # Filter by the run name we set in each training script. The dot in the tag
+    # key requires backticks for MLflow's filter parser.
+    runs = client.search_runs(
+        experiment_ids=[experiments.experiment_id],
+        filter_string=f'tags."mlflow.runName" = "{model_name}"',
+    )
     if not runs:
         return {"model": model_name}
     best = sorted(runs, key=lambda r: r.data.metrics.get("val_rmse", float("inf")))[0]
