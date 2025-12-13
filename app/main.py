@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,13 @@ MODEL_URIS = {
     "model1": "models:/collisions_random_forest/Production",
     "model2": "models:/collisions_gradient_boosting/Production",
     "model3": "models:/collisions_elastic_net/Production",
+}
+
+# Mapping used to locate run-based artifacts when the Model Registry lookup fails
+MODEL_NAMES = {
+    "model1": "collisions_random_forest",
+    "model2": "collisions_gradient_boosting",
+    "model3": "collisions_elastic_net",
 }
 
 
@@ -57,15 +65,48 @@ def to_dataframe(records: List[CollisionRecord]) -> pd.DataFrame:
     return pd.concat(data, ignore_index=True)
 
 
-def load_model(uri: str):
+def _lookup_run_uri(model_key: str) -> str | None:
+    """Return a runs:/ URI from artifacts/model_comparison.csv if available."""
+
+    comparison_path = Path("artifacts/model_comparison.csv")
+    if not comparison_path.exists():
+        return None
+
+    model_name = MODEL_NAMES[model_key]
+    with comparison_path.open("r", newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("model") == model_name and row.get("run_id"):
+                return f"runs:/{row['run_id']}/model"
+
+    return None
+
+
+def load_model(model_key: str):
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
     if MLFLOW_SETTINGS.registry_uri:
         mlflow.set_registry_uri(MLFLOW_SETTINGS.registry_uri)
+
+    primary_uri = MODEL_URIS[model_key]
     try:
-        return mlflow.sklearn.load_model(uri)
+        return mlflow.sklearn.load_model(primary_uri)
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Unable to load model %s", uri)
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.warning("Model registry lookup failed for %s: %s", primary_uri, exc)
+
+        fallback_uri = _lookup_run_uri(model_key)
+        if fallback_uri:
+            try:
+                logger.info("Loading model %s from local artifacts at %s", model_key, fallback_uri)
+                return mlflow.sklearn.load_model(fallback_uri)
+            except Exception:  # noqa: BLE001
+                logger.exception("Failed to load fallback model at %s", fallback_uri)
+
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Unable to load model. Ensure the MLflow Model Registry is reachable or "
+                "artifacts/model_comparison.csv contains a valid run_id for the model."
+            ),
+        )
 
 
 MODELS_CACHE: dict[str, object] = {}
@@ -85,7 +126,7 @@ def get_model(model_key: str):
         raise HTTPException(status_code=404, detail=f"Unknown model key: {model_key}")
 
     if model_key not in MODELS_CACHE:
-        MODELS_CACHE[model_key] = load_model(MODEL_URIS[model_key])
+        MODELS_CACHE[model_key] = load_model(model_key)
 
     return MODELS_CACHE[model_key]
 
