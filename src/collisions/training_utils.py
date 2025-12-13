@@ -8,6 +8,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -33,7 +34,45 @@ def feature_target_split(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     return X, y
 
 
-def build_preprocessor() -> ColumnTransformer:
+class RareCategoryGrouper(BaseEstimator, TransformerMixin):
+    """Group infrequent categories into an "Other" bucket to cap OHE size."""
+
+    def __init__(self, top_n: int = 50, min_frequency: int | float | None = None):
+        self.top_n = top_n
+        self.min_frequency = min_frequency
+        self.frequent_categories_: dict[str, set] = {}
+        self.columns_: list[str] = []
+
+    def fit(self, X, y=None):  # noqa: ANN001
+        df = self._to_frame(X)
+        self.columns_ = list(df.columns)
+        for col in self.columns_:
+            counts = df[col].value_counts(dropna=False)
+            top = counts
+            if self.min_frequency is not None:
+                threshold = self.min_frequency
+                if isinstance(threshold, float):
+                    threshold = max(int(len(df) * threshold), 1)
+                top = top[top >= threshold]
+            top = top.head(self.top_n)
+            self.frequent_categories_[col] = set(top.index.tolist())
+        return self
+
+    def transform(self, X):  # noqa: ANN001
+        df = self._to_frame(X)
+        for col in self.columns_:
+            frequent = self.frequent_categories_.get(col, set())
+            df[col] = df[col].where(df[col].isin(frequent), other="Other")
+        return df
+
+    @staticmethod
+    def _to_frame(X) -> pd.DataFrame:  # noqa: ANN001, N802
+        if isinstance(X, pd.DataFrame):
+            return X.copy()
+        return pd.DataFrame(X)
+
+
+def build_preprocessor(one_hot_sparse: bool = True, max_categories: int = 50) -> ColumnTransformer:
     numeric_features = [
         col for col in NUMERIC_COLUMNS if col != TARGET_COLUMN
     ] + ["CRASH_HOUR", "CRASH_MONTH", "CRASH_YEAR"]
@@ -44,16 +83,25 @@ def build_preprocessor() -> ColumnTransformer:
         ("scaler", StandardScaler()),
     ])
 
+    ohe_kwargs = {"handle_unknown": "ignore"}
+    # Support both new (sparse_output) and legacy (sparse) kwargs for OneHotEncoder
+    if "sparse_output" in OneHotEncoder.__init__.__code__.co_varnames:
+        ohe_kwargs["sparse_output"] = one_hot_sparse
+    else:
+        ohe_kwargs["sparse"] = one_hot_sparse
+
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("encoder", OneHotEncoder(handle_unknown="ignore")),
+        ("rare_grouper", RareCategoryGrouper(top_n=max_categories)),
+        ("encoder", OneHotEncoder(**ohe_kwargs)),
     ])
 
     preprocessor = ColumnTransformer(
         transformers=[
             ("num", numeric_transformer, numeric_features),
             ("cat", categorical_transformer, categorical_features),
-        ]
+        ],
+        sparse_threshold=0.0,
     )
     return preprocessor
 

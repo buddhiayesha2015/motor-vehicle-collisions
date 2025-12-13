@@ -23,7 +23,8 @@ def main() -> None:
     X_val, y_val = training_utils.feature_target_split(validate_df)
     X_test, y_test = training_utils.feature_target_split(test_df)
 
-    preprocessor = training_utils.build_preprocessor()
+    # HistGradientBoosting requires dense inputs; disable sparse one-hot output.
+    preprocessor = training_utils.build_preprocessor(one_hot_sparse=False)
     model = HistGradientBoostingRegressor(max_depth=10, learning_rate=0.05, random_state=7)
     pipeline = Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
 
