@@ -60,7 +60,12 @@ def build_preprocessor() -> ColumnTransformer:
 
 def evaluate_regression(model, X, y, split_name: str) -> Dict[str, float]:
     preds = model.predict(X)
-    rmse = mean_squared_error(y, preds, squared=False)
+
+    if "squared" in mean_squared_error.__code__.co_varnames:
+        rmse = mean_squared_error(y, preds, squared=False)
+    else:
+        rmse = float(np.sqrt(mean_squared_error(y, preds)))
+
     mae = mean_absolute_error(y, preds)
     r2 = r2_score(y, preds)
     metrics = {f"{split_name}_rmse": rmse, f"{split_name}_mae": mae, f"{split_name}_r2": r2}
