@@ -4,11 +4,9 @@ import sys
 from pathlib import Path
 
 import mlflow
-import nannyml as nml
-try:
-    from nannyml.data_quality import DataQualityCalculator
-except ImportError:  # pragma: no cover - fallback for older NannyML versions
-    from nannyml.data_quality.calculator import DataQualityCalculator
+from nannyml.data_quality.missing import MissingValuesCalculator
+from nannyml.data_quality.unseen import UnseenValuesCalculator
+from nannyml.data_quality.range import NumericalRangeCalculator
 from math import sqrt
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -48,19 +46,36 @@ def main() -> None:
     rmse_prod = sqrt(mean_squared_error(production[TARGET_COLUMN], production["prediction"]))
 
     # DataQualityCalculator is exposed via the data_quality module in current NannyML versions
-    data_drift = DataQualityCalculator(column_names=feature_cols)
-    data_drift = data_drift.fit(reference)
-    drift_report = data_drift.calculate(production)
+    cat_cols = reference[feature_cols].select_dtypes(include=["object", "category", "bool"]).columns.tolist()
+    num_cols = [c for c in feature_cols if c not in cat_cols]
 
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    mv_res = MissingValuesCalculator(column_names=feature_cols).fit(reference).calculate(production)
+
+    uv_res = None
+    if cat_cols:
+        uv_res = UnseenValuesCalculator(column_names=cat_cols).fit(reference).calculate(
+            production)  # categorical only :contentReference[oaicite:4]{index=4}
+
+    rng_res = None
+    if num_cols:
+        rng_res = NumericalRangeCalculator(column_names=num_cols).fit(reference).calculate(production)
+
+    sections = [
+        "## Data Quality - Missing Values",
+        mv_res.to_df().to_markdown(),
+    ]
+    if uv_res is not None:
+        sections += ["## Data Quality - Unseen Values", uv_res.to_df().to_markdown()]
+    if rng_res is not None:
+        sections += ["## Data Quality - Numerical Ranges", rng_res.to_df().to_markdown()]
+
     REPORT_PATH.write_text(
         "\n".join(
             [
                 "# Drift Analysis",
                 f"Reference RMSE: {rmse_ref:.3f}",
                 f"Production RMSE: {rmse_prod:.3f}",
-                "\n## Data Quality Summary",
-                drift_report.to_markdown(),
+                *sections,
             ]
         )
     )
