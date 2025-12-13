@@ -68,12 +68,31 @@ def load_model(uri: str):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-MODELS_CACHE = {key: load_model(uri) for key, uri in MODEL_URIS.items()}
+MODELS_CACHE: dict[str, object] = {}
+
+
+def get_model(model_key: str):
+    """Lazily load and cache models to avoid startup failures.
+
+    When running the API locally without a populated MLflow Model Registry,
+    attempting to eagerly load models at import time raises an exception and
+    prevents the application from starting. By loading the model only when an
+    endpoint is called, we can surface a clear HTTP error while still allowing
+    the service to start for development and testing.
+    """
+
+    if model_key not in MODEL_URIS:
+        raise HTTPException(status_code=404, detail=f"Unknown model key: {model_key}")
+
+    if model_key not in MODELS_CACHE:
+        MODELS_CACHE[model_key] = load_model(MODEL_URIS[model_key])
+
+    return MODELS_CACHE[model_key]
 
 
 def predict(records: List[CollisionRecord], model_key: str) -> PredictionResponse:
     df = to_dataframe(records)
-    model = MODELS_CACHE[model_key]
+    model = get_model(model_key)
     predictions = model.predict(df).tolist()
     timestamp = datetime.utcnow().isoformat()
     logger.info("Model %s generated %d predictions", model_key, len(predictions))
