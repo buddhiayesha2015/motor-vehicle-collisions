@@ -34,7 +34,9 @@ def feature_target_split(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
 
 
 def build_preprocessor() -> ColumnTransformer:
-    numeric_features = NUMERIC_COLUMNS + ["CRASH_HOUR", "CRASH_MONTH", "CRASH_YEAR"]
+    numeric_features = [
+        col for col in NUMERIC_COLUMNS if col != TARGET_COLUMN
+    ] + ["CRASH_HOUR", "CRASH_MONTH", "CRASH_YEAR"]
     categorical_features = CATEGORICAL_COLUMNS
 
     numeric_transformer = Pipeline(steps=[
