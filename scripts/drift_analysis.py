@@ -5,7 +5,10 @@ from pathlib import Path
 
 import mlflow
 import nannyml as nml
-from nannyml.data_quality import DataQualityCalculator
+try:
+    from nannyml.data_quality import DataQualityCalculator
+except ImportError:  # pragma: no cover - fallback for older NannyML versions
+    from nannyml.data_quality.calculator import DataQualityCalculator
 from math import sqrt
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
