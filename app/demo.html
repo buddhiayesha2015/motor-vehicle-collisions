@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Collision Injury Prediction Demo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 1rem auto;
+        max-width: 960px;
+        line-height: 1.5;
+      }
+      header {
+        margin-bottom: 1rem;
+      }
+      section {
+        margin-bottom: 1.5rem;
+      }
+      textarea {
+        width: 100%;
+        min-height: 260px;
+        font-family: "Fira Code", "SFMono-Regular", Consolas, monospace;
+        padding: 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #888;
+      }
+      button {
+        padding: 0.75rem 1.25rem;
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      select,
+      label {
+        font-size: 1rem;
+      }
+      #response,
+      #error {
+        white-space: pre-wrap;
+        background: #1118270d;
+        padding: 0.75rem;
+        border-radius: 6px;
+        border: 1px solid #888;
+      }
+      code {
+        background: #1118270d;
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Collision Injury Prediction Demo</h1>
+      <p>
+        Use this page to send requests to the FastAPI endpoints without writing any
+        Python code. The request body is editable JSON matching
+        <code>app/schemas.py</code>. Pick a model, click "Send request", and view the
+        API response below.
+      </p>
+    </header>
+
+    <section>
+      <label for="model">Model:</label>
+      <select id="model">
+        <option value="predict_model1">Model 1 (Random Forest)</option>
+        <option value="predict_model2">Model 2 (Gradient Boosting)</option>
+        <option value="predict_model3">Model 3 (Elastic Net)</option>
+      </select>
+    </section>
+
+    <section>
+      <label for="payload">Request payload</label>
+      <textarea id="payload"></textarea>
+      <p>
+        Tip: The server logs will show how many predictions were generated and a
+        short preview whenever you submit a request.
+      </p>
+      <button id="send">Send request</button>
+    </section>
+
+    <section>
+      <h2>Response</h2>
+      <div id="response">(waiting for request)</div>
+      <div id="error" style="color: #dc2626"></div>
+    </section>
+
+    <script>
+      const defaultPayload = [
+        {
+          "CRASH DATE": "2024-01-15",
+          "CRASH TIME": "08:30",
+          "BOROUGH": "Manhattan",
+          "ZIP CODE": "10001",
+          "LATITUDE": 40.748,
+          "LONGITUDE": -73.9857,
+          "ON STREET NAME": "West 34 Street",
+          "CROSS STREET NAME": "7 Avenue",
+          "OFF STREET NAME": "",
+          "CONTRIBUTING FACTOR VEHICLE 1": "Unspecified",
+          "VEHICLE TYPE CODE 1": "Sedan",
+          "NUMBER OF PERSONS KILLED": 0,
+          "NUMBER OF PEDESTRIANS INJURED": 0,
+          "NUMBER OF PEDESTRIANS KILLED": 0,
+          "NUMBER OF CYCLIST INJURED": 0,
+          "NUMBER OF CYCLIST KILLED": 0,
+          "NUMBER OF MOTORIST INJURED": 1,
+          "NUMBER OF MOTORIST KILLED": 0
+        }
+      ];
+
+      const payloadEl = document.getElementById("payload");
+      const responseEl = document.getElementById("response");
+      const errorEl = document.getElementById("error");
+      payloadEl.value = JSON.stringify(defaultPayload, null, 2);
+
+      document.getElementById("send").addEventListener("click", async () => {
+        errorEl.textContent = "";
+        responseEl.textContent = "(loading...)";
+
+        let parsed;
+        try {
+          parsed = JSON.parse(payloadEl.value);
+        } catch (err) {
+          errorEl.textContent = "Invalid JSON: " + err.message;
+          responseEl.textContent = "";
+          return;
+        }
+
+        const endpoint = document.getElementById("model").value;
+        try {
+          const res = await fetch(`/${endpoint}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(parsed)
+          });
+
+          const text = await res.text();
+          try {
+            const json = JSON.parse(text);
+            responseEl.textContent = JSON.stringify(json, null, 2);
+          } catch (err) {
+            responseEl.textContent = text || "(empty response)";
+          }
+
+          if (!res.ok) {
+            errorEl.textContent = `Request failed with status ${res.status}`;
+          }
+        } catch (err) {
+          responseEl.textContent = "";
+          errorEl.textContent = err.message;
+        }
+      });
+    </script>
+  </body>
+</html>

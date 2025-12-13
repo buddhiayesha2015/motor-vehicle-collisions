@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
+from numbers import Number
 from datetime import datetime
 from pathlib import Path
 from typing import List
@@ -9,6 +10,7 @@ from typing import List
 import mlflow
 import pandas as pd
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 
 from src.collisions.data_cleaning import CATEGORICAL_COLUMNS, NUMERIC_COLUMNS, TARGET_COLUMN
 from src.collisions.settings import MLFLOW_SETTINGS, PATHS
@@ -137,6 +139,13 @@ def predict(records: List[CollisionRecord], model_key: str) -> PredictionRespons
     predictions = model.predict(df).tolist()
     timestamp = datetime.utcnow().isoformat()
     logger.info("Model %s generated %d predictions", model_key, len(predictions))
+    if predictions:
+        preview = ", ".join(
+            f"{p:.3f}" if isinstance(p, Number) else str(p) for p in predictions[:3]
+        )
+        if len(predictions) > 3:
+            preview += "..."
+        logger.info("Prediction preview: %s", preview)
     return PredictionResponse(
         model_name=model_key,
         model_version=getattr(model, "version", None),
@@ -157,6 +166,14 @@ async def root():
             "predict_model3": "/predict_model3",
         },
     }
+
+
+@app.get("/demo", response_class=HTMLResponse, summary="Interactive web demo")
+async def demo_page() -> HTMLResponse:
+    """Serve a small web UI that can call the prediction endpoints."""
+
+    demo_html = (Path(__file__).with_name("demo.html")).read_text(encoding="utf-8")
+    return HTMLResponse(content=demo_html)
 
 
 @app.post("/predict_model1", response_model=PredictionResponse)

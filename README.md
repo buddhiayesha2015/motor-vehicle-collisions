@@ -68,10 +68,10 @@ This project cleans the NYC Motor Vehicle Collisions dataset, performs time-awar
     ```
     Endpoints: `/predict_model1`, `/predict_model2`, `/predict_model3` (payload schema in `app/schemas.py`).
 
-12. **Smoke-test the API**
-    ```powershell
-    python scripts\demo_requests.py
-    ```
+12. **Smoke-test the API with a browser**
+    - Visit <http://localhost:8000/demo> for a web-based JSON client that calls the prediction endpoints without writing code.
+    - The server logs will show how many predictions were generated plus a short preview for each request.
+    - The legacy CLI smoke-test remains available via `python scripts\demo_requests.py` if you prefer a script.
 
 ## Workflow reference
 - `python -m src.collisions.data_cleaning` cleans data, normalizes fields, encodes categoricals, and saves time-aware train/validate/test splits in `data/processed/`.
