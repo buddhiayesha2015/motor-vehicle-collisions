@@ -145,6 +145,20 @@ def predict(records: List[CollisionRecord], model_key: str) -> PredictionRespons
     )
 
 
+@app.get("/", summary="API status")
+async def root():
+    """Simple landing endpoint to avoid 404s at the root path."""
+
+    return {
+        "message": "Collision Injury Prediction API",
+        "available_endpoints": {
+            "predict_model1": "/predict_model1",
+            "predict_model2": "/predict_model2",
+            "predict_model3": "/predict_model3",
+        },
+    }
+
+
 @app.post("/predict_model1", response_model=PredictionResponse)
 async def predict_model1(records: List[CollisionRecord]):
     return predict(records, "model1")
