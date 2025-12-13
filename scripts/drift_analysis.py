@@ -15,15 +15,16 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.collisions.data_cleaning import TARGET_COLUMN
 from src.collisions.settings import PATHS, MLFLOW_SETTINGS
 
-MODEL_URI = "models:/collisions_random_forest/Production"
 REPORT_PATH = Path("artifacts/drift_report.md")
 
 
 def load_model():
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
-    if MLFLOW_SETTINGS.registry_uri:
-        mlflow.set_registry_uri(MLFLOW_SETTINGS.registry_uri)
-    return mlflow.sklearn.load_model(MODEL_URI)
+
+    df = pd.read_csv("artifacts/model_comparison.csv")
+    run_id = df.loc[df["model"] == "collisions_random_forest", "run_id"].iloc[0]
+
+    return mlflow.sklearn.load_model(f"runs:/{run_id}/model")
 
 
 def main() -> None:
