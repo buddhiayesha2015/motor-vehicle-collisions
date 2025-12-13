@@ -33,7 +33,7 @@ def feature_target_split(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Series]:
     return X, y
 
 
-def build_preprocessor() -> ColumnTransformer:
+def build_preprocessor(one_hot_sparse: bool = True) -> ColumnTransformer:
     numeric_features = [
         col for col in NUMERIC_COLUMNS if col != TARGET_COLUMN
     ] + ["CRASH_HOUR", "CRASH_MONTH", "CRASH_YEAR"]
@@ -44,16 +44,24 @@ def build_preprocessor() -> ColumnTransformer:
         ("scaler", StandardScaler()),
     ])
 
+    ohe_kwargs = {"handle_unknown": "ignore"}
+    # Support both new (sparse_output) and legacy (sparse) kwargs for OneHotEncoder
+    if "sparse_output" in OneHotEncoder.__init__.__code__.co_varnames:
+        ohe_kwargs["sparse_output"] = one_hot_sparse
+    else:
+        ohe_kwargs["sparse"] = one_hot_sparse
+
     categorical_transformer = Pipeline(steps=[
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("encoder", OneHotEncoder(handle_unknown="ignore")),
+        ("encoder", OneHotEncoder(**ohe_kwargs)),
     ])
 
     preprocessor = ColumnTransformer(
         transformers=[
             ("num", numeric_transformer, numeric_features),
             ("cat", categorical_transformer, categorical_features),
-        ]
+        ],
+        sparse_threshold=0.0,
     )
     return preprocessor
 
