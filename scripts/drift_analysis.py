@@ -5,6 +5,7 @@ from pathlib import Path
 
 import mlflow
 import nannyml as nml
+from math import sqrt
 import pandas as pd
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -38,8 +39,9 @@ def main() -> None:
     reference["prediction"] = model.predict(reference[feature_cols])
     production["prediction"] = model.predict(production[feature_cols])
 
-    rmse_ref = mean_squared_error(reference[TARGET_COLUMN], reference["prediction"], squared=False)
-    rmse_prod = mean_squared_error(production[TARGET_COLUMN], production["prediction"], squared=False)
+    # Using explicit square root keeps compatibility with older scikit-learn versions
+    rmse_ref = sqrt(mean_squared_error(reference[TARGET_COLUMN], reference["prediction"]))
+    rmse_prod = sqrt(mean_squared_error(production[TARGET_COLUMN], production["prediction"]))
 
     data_drift = nml.DataQualityCalculator(column_names=feature_cols)
     data_drift = data_drift.fit(reference)
