@@ -31,7 +31,7 @@ This project cleans the NYC Motor Vehicle Collisions dataset, performs time-awar
    ```
    Outputs go to `data/processed/` (train/validate/test) and `artifacts/feature_metadata.json`.
 
-6. **Start MLflow + PostgreSQL via Docker Compose**
+6. **Start MLflow + PostgreSQL via Docker Compose (local option)**
    ```powershell
    docker compose up
    ```
@@ -91,6 +91,34 @@ Point the training scripts to the tracking server using environment variables:
 $env:MLFLOW_TRACKING_URI = "http://localhost:5000"
 $env:MLFLOW_REGISTRY_URI = "http://localhost:5000"
 ```
+
+### Remote MLflow (EC2 + S3 + Neon Postgres)
+To log runs to the hosted stack (EC2 MLflow server, S3 artifacts, Neon Postgres backend), create a `.env` from the template and fill in your secrets locally:
+
+```powershell
+Copy-Item .env.example .env
+notepad .env   # fill in AWS + Neon credentials, keep the file out of version control
+```
+
+Key entries in `.env`:
+- `MLFLOW_TRACKING_URI` / `MLFLOW_REGISTRY_URI`: `http://34.206.23.119:5000`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`: IAM credentials for `mlflow-artifacts-buddhi`
+- `MLFLOW_S3_BUCKET`: `mlflow-artifacts-buddhi`
+- `POSTGRES_CONNECTION_URI`: Neon SQLAlchemy URI (e.g., `postgresql+psycopg2://mlflow_buddhi:<YOUR_NEON_PASSWORD>@ep-lively-band-a4ojyx5g-pooler.us-east-1.aws.neon.tech/mlflow?sslmode=require&channel_binding=require`)
+
+Then point your PowerShell session at the remote MLflow instance before running training scripts:
+
+```powershell
+$env:MLFLOW_TRACKING_URI = "http://34.206.23.119:5000"
+$env:MLFLOW_REGISTRY_URI = "http://34.206.23.119:5000"
+
+# Load AWS creds from .env into the session (simple example, adjust if you prefer a secrets manager)
+Get-Content .env | Where-Object { $_ -match "^AWS_" } | ForEach-Object {
+  $name, $value = $_.Split('='); Set-Item -Path "Env:$name" -Value $value
+}
+```
+
+When the server on EC2 is started with the Neon connection string and the `mlflow-artifacts-buddhi` S3 bucket, all artifacts and metadata from local training runs will be persisted remotely.
 
 ## Serving
 ```powershell

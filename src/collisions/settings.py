@@ -18,6 +18,7 @@ class MlflowSettings(BaseSettings):
 class DatabaseSettings(BaseSettings):
     """Settings for the Postgres backend store for MLflow."""
 
+    connection_uri: str | None = Field(default=None, description="Full SQLAlchemy connection URI")
     host: str = Field(default="localhost")
     port: int = Field(default=5432)
     user: str = Field(default="mlflow")
@@ -28,6 +29,8 @@ class DatabaseSettings(BaseSettings):
 
     @property
     def uri(self) -> str:
+        if self.connection_uri:
+            return self.connection_uri
         return f"postgresql+psycopg2://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}"
 
 
