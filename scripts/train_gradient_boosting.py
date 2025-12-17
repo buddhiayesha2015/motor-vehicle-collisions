@@ -41,12 +41,7 @@ def main() -> None:
         for k, v in {**val_metrics, **test_metrics}.items():
             mlflow.log_metric(k, v)
 
-        mlflow.sklearn.log_model(pipeline, name="gradient_boosting", registered_model_name=MODEL_NAME)
-        run = mlflow.active_run()
-        if run:
-            model_uri = f"runs:/{run.info.run_id}/model"
-            version = training_utils.register_model(model_uri, MODEL_NAME)
-            mlflow.log_param("registered_version", version)
+        mlflow.sklearn.log_model(sk_model=pipeline, name="gradient_boosting", registered_model_name=MODEL_NAME)
 
 
 if __name__ == "__main__":
