@@ -36,7 +36,7 @@ This workflow assumes MLflow is hosted remotely (EC2 + Neon + S3) and your local
    ```
    Outputs go to `data/processed/` (train/validate/test) and `artifacts/feature_metadata.json`.
 
-7. **Run H2O AutoML** (on the cleaned training split)
+7. **Run H2O AutoML** (on the cleaned training split; logs to remote MLflow)
    ```powershell
    python scripts\run_automl.py
    ```
@@ -68,7 +68,7 @@ This workflow assumes MLflow is hosted remotely (EC2 + Neon + S3) and your local
 
 ## Workflow reference
 - `python -m src.collisions.data_cleaning` cleans data, normalizes fields, encodes categoricals, and saves time-aware train/validate/test splits in `data/processed/`.
-- `scripts/run_automl.py` runs H2O AutoML on the training set and records the leaderboard.
+- `scripts/run_automl.py` runs H2O AutoML on the training set and logs the run, leaderboard artifact, and leader model to the remote MLflow experiment/registry.
 - `scripts/train_random_forest.py`, `scripts/train_gradient_boosting.py`, and `scripts/train_elastic_net.py` train three models, evaluate them, log to MLflow, and register them in the Model Registry.
 - `scripts/drift_analysis.py` evaluates data and performance drift using a newer time window.
 - `app/main.py` starts a FastAPI app with three prediction endpoints that load models from the registry.
