@@ -47,7 +47,7 @@ def main() -> None:
         if importance_path.exists():
             mlflow.log_artifact(str(importance_path))
 
-        mlflow.sklearn.log_model(pipeline, artifact_path="model", registered_model_name=MODEL_NAME)
+        mlflow.sklearn.log_model(pipeline, name="model", registered_model_name=MODEL_NAME)
 
         run = mlflow.active_run()
         if run:

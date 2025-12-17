@@ -39,7 +39,7 @@ def main() -> None:
         leaderboard = aml.leaderboard.as_data_frame()
         PATHS.automl_leaderboard.parent.mkdir(parents=True, exist_ok=True)
         leaderboard.to_csv(PATHS.automl_leaderboard, index=False)
-        mlflow.log_artifact(PATHS.automl_leaderboard, artifact_path="automl")
+        mlflow.log_artifact(PATHS.automl_leaderboard, name="automl")
 
         metric_columns = [c for c in leaderboard.columns if c != "model_id"]
 
