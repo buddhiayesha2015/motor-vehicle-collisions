@@ -41,19 +41,38 @@ def main() -> None:
         leaderboard.to_csv(PATHS.automl_leaderboard, index=False)
         mlflow.log_artifact(PATHS.automl_leaderboard, artifact_path="automl")
 
+        metric_columns = [c for c in leaderboard.columns if c != "model_id"]
+
         top_algos = leaderboard["model_id"].head(3).tolist()
         algo_types = []
         for model_id in top_algos:
             model = h2o.get_model(model_id)
             algo_types.append(model.algo)
         mlflow.log_text("\n".join(algo_types), artifact_file="automl/top_algos.txt")
+
+        for _, row in leaderboard.iterrows():
+            model_id = row["model_id"]
+            model = h2o.get_model(model_id)
+            with mlflow.start_run(
+                run_name=f"{model.algo}_{model_id}", nested=True
+            ):
+                mlflow.log_params({"model_id": model_id, "algorithm": model.algo})
+                metrics = {
+                    col: float(row[col])
+                    for col in metric_columns
+                    if pd.notnull(row[col])
+                }
+                if metrics:
+                    mlflow.log_metrics(metrics)
+                mlflow.h2o.log_model(model, name=f"automl_model_{model_id}")
+
         perf = aml.leader.model_performance(valid_h2o)
         mlflow.log_metrics({
             "leader_rmse": perf.rmse(),
             "leader_mae": perf.mae(),
             "leader_r2": perf.r2(),
         })
-        mlflow.h2o.log_model(aml.leader, artifact_path="automl_leader")
+        mlflow.h2o.log_model(aml.leader, name="automl_leader")
         print("Top three model types:", algo_types)
 
 
