@@ -135,8 +135,8 @@ def log_feature_importance(model, feature_names: list[str], artifact_path: Path)
 
 def setup_mlflow() -> None:
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
-    if MLFLOW_SETTINGS.registry_uri:
-        mlflow.set_registry_uri(MLFLOW_SETTINGS.registry_uri)
+    if MLFLOW_SETTINGS.resolved_registry_uri:
+        mlflow.set_registry_uri(MLFLOW_SETTINGS.resolved_registry_uri)
     mlflow.set_experiment(MLFLOW_SETTINGS.experiment_name)
 
 

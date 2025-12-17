@@ -85,8 +85,8 @@ def _lookup_run_uri(model_key: str) -> str | None:
 
 def load_model(model_key: str):
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
-    if MLFLOW_SETTINGS.registry_uri:
-        mlflow.set_registry_uri(MLFLOW_SETTINGS.registry_uri)
+    if MLFLOW_SETTINGS.resolved_registry_uri:
+        mlflow.set_registry_uri(MLFLOW_SETTINGS.resolved_registry_uri)
 
     primary_uri = MODEL_URIS[model_key]
     try:
