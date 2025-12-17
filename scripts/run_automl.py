@@ -20,7 +20,6 @@ from src.collisions.training_utils import setup_mlflow
 
 def main() -> None:
     setup_mlflow()
-    mlflow.h2o.autolog()
 
     h2o.init()
     train_df = pd.read_csv(PATHS.train)
@@ -48,6 +47,12 @@ def main() -> None:
             model = h2o.get_model(model_id)
             algo_types.append(model.algo)
         mlflow.log_text("\n".join(algo_types), artifact_file="automl/top_algos.txt")
+        perf = aml.leader.model_performance(valid_h2o)
+        mlflow.log_metrics({
+            "leader_rmse": perf.rmse(),
+            "leader_mae": perf.mae(),
+            "leader_r2": perf.r2(),
+        })
         mlflow.h2o.log_model(aml.leader, artifact_path="automl_leader")
         print("Top three model types:", algo_types)
 
