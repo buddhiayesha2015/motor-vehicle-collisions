@@ -87,8 +87,13 @@ def clean_dataset(raw_path: Path = PATHS.raw_data, output_path: Path = PATHS.cle
     df = handle_missing_values(df)
     df = encode_categoricals(df)
     df = df.drop_duplicates(subset=["COLLISION_ID"])
+    reference_df = df[df["CRASH_YEAR"].between(2012, 2022)].copy()
+    drift_df = df[df["CRASH_YEAR"].between(2023, 2025)].copy()
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(output_path, index=False)
+    reference_df.to_csv(output_path, index=False)
+    PATHS.drift_cleaned_data.parent.mkdir(parents=True, exist_ok=True)
+    drift_df.to_csv(PATHS.drift_cleaned_data, index=False)
 
     metadata = {
         "target": TARGET_COLUMN,
@@ -98,7 +103,7 @@ def clean_dataset(raw_path: Path = PATHS.raw_data, output_path: Path = PATHS.cle
     }
     PATHS.feature_metadata.parent.mkdir(parents=True, exist_ok=True)
     PATHS.feature_metadata.write_text(json.dumps(metadata, indent=2))
-    return df
+    return reference_df
 
 
 def chronological_split(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:

@@ -47,6 +47,7 @@ class Paths(BaseModel):
     raw_data: Path = Path("data/raw/Motor_Vehicle_Collisions-Crashes_20251211.csv")
     processed_dir: Path = Path("data/processed")
     cleaned_data: Path = processed_dir / "cleaned_collisions.csv"
+    drift_cleaned_data: Path = processed_dir / "drift_cleaned_collisions.csv"
     train: Path = processed_dir / "train.csv"
     validation: Path = processed_dir / "validate.csv"
     test: Path = processed_dir / "test.csv"
