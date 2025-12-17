@@ -82,6 +82,7 @@ def encode_categoricals(df: pd.DataFrame) -> pd.DataFrame:
 def clean_dataset(raw_path: Path = PATHS.raw_data, output_path: Path = PATHS.cleaned_data) -> pd.DataFrame:
     df = pd.read_csv(raw_path)
     df = convert_datetime(df)
+    df = df[(df["CRASH_YEAR"] >= 2012) & (df["CRASH_YEAR"] <= 2022)].copy()
     df = df.sort_values("CRASH_DATETIME").reset_index(drop=True)
     df = clamp_coordinates(df)
     df = handle_missing_values(df)
