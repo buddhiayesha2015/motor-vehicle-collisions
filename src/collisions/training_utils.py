@@ -46,6 +46,7 @@ class RareCategoryGrouper(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):  # noqa: ANN001
         df = self._to_frame(X)
         self.columns_ = list(df.columns)
+        self.feature_names_in_ = np.asarray(self.columns_, dtype=object)
         for col in self.columns_:
             counts = df[col].value_counts(dropna=False)
             top = counts
@@ -70,6 +71,21 @@ class RareCategoryGrouper(BaseEstimator, TransformerMixin):
         if isinstance(X, pd.DataFrame):
             return X.copy()
         return pd.DataFrame(X)
+
+    def get_feature_names_out(self, input_features=None):  # noqa: ANN001
+        """Return input feature names to satisfy scikit-learn's API contract."""
+
+        if input_features is None:
+            if hasattr(self, "feature_names_in_"):
+                input_features = self.feature_names_in_
+            elif self.columns_:
+                input_features = self.columns_
+            else:
+                raise AttributeError(
+                    "RareCategoryGrouper is not fitted yet and no input_features were provided"
+                )
+
+        return np.asarray(input_features, dtype=object)
 
 
 def build_preprocessor(one_hot_sparse: bool = True, max_categories: int = 50) -> ColumnTransformer:
