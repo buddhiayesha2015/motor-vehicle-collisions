@@ -8,11 +8,19 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class MlflowSettings(BaseSettings):
     """Configuration for MLflow tracking and registry."""
 
-    tracking_uri: str = Field(default="http://localhost:5000")
+    tracking_uri: str = Field(default="http://34.206.23.119:5000")
     experiment_name: str = Field(default="collision_regression")
     registry_uri: str | None = Field(default=None)
 
-    model_config = SettingsConfigDict(env_prefix="MLFLOW_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="MLFLOW_", env_file=".env", extra="ignore"
+    )
+
+    @property
+    def resolved_registry_uri(self) -> str:
+        """Prefer the explicit registry URI, otherwise mirror the tracking URI."""
+
+        return self.registry_uri or self.tracking_uri
 
 
 class DatabaseSettings(BaseSettings):
