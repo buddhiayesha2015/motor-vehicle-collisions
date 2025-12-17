@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import inspect
 import sys
+import warnings
 from pathlib import Path
 
 import mlflow
@@ -46,6 +48,8 @@ def load_model():
 
 
 def main() -> None:
+    warnings.filterwarnings("ignore", category=pd.errors.PerformanceWarning)
+
     reference = pd.read_csv(PATHS.cleaned_data)
     production = pd.read_csv(PATHS.drift_cleaned_data)
 
@@ -79,13 +83,30 @@ def main() -> None:
     if num_cols:
         rng_res = NumericalRangeCalculator(column_names=num_cols).fit(reference).calculate(production)
 
-    drift_calc = UnivariateDriftCalculator(
-        timestamp_column_name="CRASH_TIMESTAMP",
-        column_names=feature_cols,
-        categorical_drift_method="chi2",
-        continuous_drift_method="kolmogorov_smirnov",
-        chunk_size=5000,
-    ).fit(reference)
+    drift_kwargs = {
+        "timestamp_column_name": "CRASH_TIMESTAMP",
+        "column_names": feature_cols,
+        "chunk_size": 5000,
+    }
+
+    drift_init_params = inspect.signature(UnivariateDriftCalculator).parameters
+    if {"categorical_drift_method", "continuous_drift_method"}.issubset(drift_init_params):
+        drift_kwargs.update(
+            categorical_drift_method="chi2",
+            continuous_drift_method="kolmogorov_smirnov",
+        )
+    elif {"categorical_methods", "continuous_methods"}.issubset(drift_init_params):
+        drift_kwargs.update(
+            categorical_methods=["chi2"],
+            continuous_methods=["kolmogorov_smirnov"],
+        )
+    elif {"categorical_method", "continuous_method"}.issubset(drift_init_params):
+        drift_kwargs.update(
+            categorical_method="chi2",
+            continuous_method="kolmogorov_smirnov",
+        )
+
+    drift_calc = UnivariateDriftCalculator(**drift_kwargs).fit(reference)
     drift_res = drift_calc.calculate(production)
 
     sections = [
