@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import mlflow
+from mlflow.tracking import MlflowClient
 from nannyml.data_quality.missing import MissingValuesCalculator
 from nannyml.data_quality.unseen import UnseenValuesCalculator
 from nannyml.data_quality.range import NumericalRangeCalculator
@@ -21,13 +22,39 @@ from src.collisions.settings import PATHS, MLFLOW_SETTINGS
 REPORT_PATH = Path("artifacts/drift_report.md")
 
 
+MODEL_NAME = "collisions_random_forest"
+
+
+def _load_latest_registered_model(client: MlflowClient):
+    versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+    if not versions:
+        return None
+
+    latest = max(versions, key=lambda v: int(v.version))
+    return mlflow.sklearn.load_model(f"models:/{MODEL_NAME}/{latest.version}")
+
+
+def _load_run_model_fallback():
+    df = pd.read_csv("artifacts/model_comparison.csv")
+    matches = df.loc[df["model"] == MODEL_NAME, "run_id"].dropna()
+    if matches.empty:
+        raise RuntimeError("No run_id available for the random forest model.")
+    run_id = matches.iloc[0]
+    return mlflow.sklearn.load_model(f"runs:/{run_id}/model")
+
+
 def load_model():
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
+    if MLFLOW_SETTINGS.resolved_registry_uri:
+        mlflow.set_registry_uri(MLFLOW_SETTINGS.resolved_registry_uri)
 
-    df = pd.read_csv("artifacts/model_comparison.csv")
-    run_id = df.loc[df["model"] == "collisions_random_forest", "run_id"].iloc[0]
+    client = MlflowClient()
 
-    return mlflow.sklearn.load_model(f"runs:/{run_id}/model")
+    model = _load_latest_registered_model(client)
+    if model is not None:
+        return model
+
+    return _load_run_model_fallback()
 
 
 def main() -> None:
