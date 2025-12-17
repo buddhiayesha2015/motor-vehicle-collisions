@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from importlib import metadata
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,15 @@ from src.collisions.settings import PATHS
 from src.collisions.training_utils import setup_mlflow
 
 
+def _pip_version_or_none() -> str | None:
+    """Best-effort retrieval of the installed pip version for MLflow env specs."""
+
+    try:
+        return metadata.version("pip")
+    except metadata.PackageNotFoundError:
+        return None
+
+
 def main() -> None:
     setup_mlflow()
 
@@ -30,6 +40,19 @@ def main() -> None:
     valid_h2o = h2o.H2OFrame(validate_df)
 
     automl_params = {"max_models": 10, "seed": 7, "sort_metric": "RMSE"}
+
+    pip_version = _pip_version_or_none()
+    conda_env = (
+        mlflow.h2o.get_default_conda_env(pip_version=pip_version)
+        if pip_version
+        else None
+    )
+
+    def log_h2o_model(model, name: str) -> None:
+        if conda_env:
+            mlflow.h2o.log_model(model, name=name, conda_env=conda_env)
+        else:
+            mlflow.h2o.log_model(model, name=name)
 
     with mlflow.start_run(run_name="h2o_automl"):
         mlflow.log_params({"automl_" + k: v for k, v in automl_params.items()})
@@ -64,7 +87,7 @@ def main() -> None:
                 }
                 if metrics:
                     mlflow.log_metrics(metrics)
-                mlflow.h2o.log_model(model, name=f"automl_model_{model_id}")
+                log_h2o_model(model, name=f"automl_model_{model_id}")
 
         perf = aml.leader.model_performance(valid_h2o)
         mlflow.log_metrics({
@@ -72,7 +95,7 @@ def main() -> None:
             "leader_mae": perf.mae(),
             "leader_r2": perf.r2(),
         })
-        mlflow.h2o.log_model(aml.leader, name="automl_leader")
+        log_h2o_model(aml.leader, name="automl_leader")
         print("Top three model types:", algo_types)
 
 
