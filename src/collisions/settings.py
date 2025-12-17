@@ -32,7 +32,9 @@ class DatabaseSettings(BaseSettings):
     password: str = Field(default="mlflow")
     database: str = Field(default="mlflow")
 
-    model_config = SettingsConfigDict(env_prefix="POSTGRES_", env_file=".env")
+    model_config = SettingsConfigDict(
+        env_prefix="POSTGRES_", env_file=".env", extra="ignore"
+    )
 
     @property
     def uri(self) -> str:
