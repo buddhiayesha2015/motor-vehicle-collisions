@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 
 import mlflow
+from mlflow.tracking import MlflowClient
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
@@ -21,11 +22,6 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Collision Injury Prediction API")
 
-MODEL_URIS = {
-    "model1": "models:/collisions_random_forest/Production",
-    "model2": "models:/collisions_gradient_boosting/Production",
-    "model3": "models:/collisions_elastic_net/Production",
-}
 
 # Mapping used to locate run-based artifacts when the Model Registry lookup fails
 MODEL_NAMES = {
@@ -67,75 +63,29 @@ def to_dataframe(records: List[CollisionRecord]) -> pd.DataFrame:
     return pd.concat(data, ignore_index=True)
 
 
-def _lookup_run_uri(model_key: str) -> str | None:
-    """Return a runs:/ URI from artifacts/model_comparison.csv if available."""
-
-    comparison_path = Path("artifacts/model_comparison.csv")
-    if not comparison_path.exists():
+def _load_latest_registered_model(model_name: str, client: MlflowClient):
+    versions = client.search_model_versions(f"name='{model_name}'")
+    if not versions:
         return None
 
-    model_name = MODEL_NAMES[model_key]
-    with comparison_path.open("r", newline="") as f:
-        for row in csv.DictReader(f):
-            if row.get("model") == model_name and row.get("run_id"):
-                return f"runs:/{row['run_id']}/model"
-
-    return None
+    latest = max(versions, key=lambda v: int(v.version))
+    return mlflow.sklearn.load_model(f"models:/{model_name}/{latest.version}")
 
 
 def load_model(model_key: str):
+    model_name = MODEL_NAMES[model_key]
     mlflow.set_tracking_uri(MLFLOW_SETTINGS.tracking_uri)
     if MLFLOW_SETTINGS.resolved_registry_uri:
         mlflow.set_registry_uri(MLFLOW_SETTINGS.resolved_registry_uri)
 
-    primary_uri = MODEL_URIS[model_key]
-    try:
-        return mlflow.sklearn.load_model(primary_uri)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Model registry lookup failed for %s: %s", primary_uri, exc)
+    client = MlflowClient()
 
-        fallback_uri = _lookup_run_uri(model_key)
-        if fallback_uri:
-            try:
-                logger.info("Loading model %s from local artifacts at %s", model_key, fallback_uri)
-                return mlflow.sklearn.load_model(fallback_uri)
-            except Exception:  # noqa: BLE001
-                logger.exception("Failed to load fallback model at %s", fallback_uri)
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Unable to load model. Ensure the MLflow Model Registry is reachable or "
-                "artifacts/model_comparison.csv contains a valid run_id for the model."
-            ),
-        )
-
-
-MODELS_CACHE: dict[str, object] = {}
-
-
-def get_model(model_key: str):
-    """Lazily load and cache models to avoid startup failures.
-
-    When running the API locally without a populated MLflow Model Registry,
-    attempting to eagerly load models at import time raises an exception and
-    prevents the application from starting. By loading the model only when an
-    endpoint is called, we can surface a clear HTTP error while still allowing
-    the service to start for development and testing.
-    """
-
-    if model_key not in MODEL_URIS:
-        raise HTTPException(status_code=404, detail=f"Unknown model key: {model_key}")
-
-    if model_key not in MODELS_CACHE:
-        MODELS_CACHE[model_key] = load_model(model_key)
-
-    return MODELS_CACHE[model_key]
+    return _load_latest_registered_model(model_name, client)
 
 
 def predict(records: List[CollisionRecord], model_key: str) -> PredictionResponse:
     df = to_dataframe(records)
-    model = get_model(model_key)
+    model = load_model(model_key)
     predictions = model.predict(df).tolist()
     timestamp = datetime.utcnow().isoformat()
     logger.info("Model %s generated %d predictions", model_key, len(predictions))

@@ -40,7 +40,7 @@ def main() -> None:
         for k, v in {**val_metrics, **test_metrics}.items():
             mlflow.log_metric(k, v)
 
-        mlflow.sklearn.log_model(pipeline, artifact_path="model", registered_model_name=MODEL_NAME)
+        mlflow.sklearn.log_model(pipeline, name="elastic_net", registered_model_name=MODEL_NAME)
         run = mlflow.active_run()
         if run:
             model_uri = f"runs:/{run.info.run_id}/model"
