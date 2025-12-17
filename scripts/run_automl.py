@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from importlib.util import find_spec
+import warnings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -12,6 +14,7 @@ import mlflow
 import mlflow.h2o  # noqa: F401
 import pandas as pd
 from h2o.automl import H2OAutoML
+from h2o.exceptions import H2ODependencyWarning
 
 from src.collisions.data_cleaning import TARGET_COLUMN
 from src.collisions.settings import PATHS
@@ -29,14 +32,26 @@ def main() -> None:
     train_h2o = h2o.H2OFrame(train_df)
     valid_h2o = h2o.H2OFrame(validate_df)
 
-    automl_params = {"max_models": 10, "seed": 7, "sort_metric": "RMSE"}
+    automl_params = {
+        "max_models": 10,
+        "seed": 7,
+        "sort_metric": "RMSE",
+        # Keep the overall run tighter so AutoML completes quickly.
+        "max_runtime_secs": 20 * 60,
+        # Reduce cross-validation folds to lower training cost.
+        "nfolds": 3,
+    }
+
+    use_multi_thread = find_spec("polars") is not None and find_spec("pyarrow") is not None
 
     with mlflow.start_run(run_name="h2o_automl"):
         mlflow.log_params({"automl_" + k: v for k, v in automl_params.items()})
         aml = H2OAutoML(**automl_params)
         aml.train(x=feature_cols, y=TARGET_COLUMN, training_frame=train_h2o, validation_frame=valid_h2o)
 
-        leaderboard = aml.leaderboard.as_data_frame()
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=H2ODependencyWarning)
+            leaderboard = aml.leaderboard.as_data_frame(use_multi_thread=use_multi_thread)
         PATHS.automl_leaderboard.parent.mkdir(parents=True, exist_ok=True)
         leaderboard.to_csv(PATHS.automl_leaderboard, index=False)
         mlflow.log_artifact(PATHS.automl_leaderboard, name="automl")
