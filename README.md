@@ -74,6 +74,9 @@ This workflow assumes MLflow is hosted remotely (EC2 + Neon + S3) and your local
 - `app/main.py` starts a FastAPI app with three prediction endpoints that load models from the registry.
 - `scripts/demo_requests.py` exercises the FastAPI endpoints with a GUI-friendly JSON payload for quick smoke tests.
 
+## [Screenshots](screenshots/)
+- Add project screenshots to the `screenshots/` folder (for example: demo UI, MLflow runs, model comparison, S3/Neon setup).
+
 ## Remote MLflow Tracking (AWS EC2 + Neon + S3)
 **Server side (run on the EC2 instance at `34.206.23.119`):**
 - Export secrets with environment variables (or an `.env` kept on the VM):
