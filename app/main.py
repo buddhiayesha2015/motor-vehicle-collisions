@@ -97,7 +97,7 @@ def predict(records: List[CollisionRecord], model_key: str) -> PredictionRespons
             preview += "..."
         logger.info("Prediction preview: %s", preview)
     return PredictionResponse(
-        model_name=model_key,
+        model_name=MODEL_NAMES[model_key],
         model_version=getattr(model, "version", None),
         timestamp=timestamp,
         predictions=predictions,
